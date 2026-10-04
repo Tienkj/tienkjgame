@@ -25,55 +25,36 @@ steps:
     uses: actions/setup-python@v5
     with:
       python-version: "3.12"
-      cache: "pip"
-
-  - name: Upgrade pip
-    shell: pwsh
-    run: |
-      python -m pip install --upgrade pip
 
   - name: Install dependencies
-    shell: pwsh
     run: |
+      python -m pip install --upgrade pip
       python -m pip install pygame pyinstaller
 
   - name: Check Python source
-    shell: pwsh
-    run: |
-      python -m py_compile game.py
+    run: python -m py_compile game.py
 
   - name: Build EXE
-    shell: pwsh
-    run: |
-      pyinstaller `
-        --noconfirm `
-        --clean `
-        --onefile `
-        --windowed `
-        --name "TienkjGame" `
-        game.py
+    run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name TienkjGame game.py
 
   - name: Verify build
     shell: pwsh
     run: |
       if (-not (Test-Path "dist\TienkjGame.exe")) {
-        Write-Error "Build failed: dist\TienkjGame.exe was not created."
+        Write-Error "Build failed: TienkjGame.exe was not created."
         exit 1
       }
 
       $file = Get-Item "dist\TienkjGame.exe"
-
-      Write-Host "Build successful."
-      Write-Host "File: $($file.FullName)"
+      Write-Host "Build successful"
       Write-Host "Size: $($file.Length) bytes"
 
-  - name: Calculate SHA-256
+  - name: Calculate SHA256
     shell: pwsh
     run: |
-      Get-FileHash "dist\TienkjGame.exe" -Algorithm SHA256 |
-        Format-List
+      Get-FileHash "dist\TienkjGame.exe" -Algorithm SHA256
 
-  - name: Upload Windows artifact
+  - name: Upload artifact
     uses: actions/upload-artifact@v4
     with:
       name: TienkjGame-Windows
@@ -88,3 +69,4 @@ steps:
       generate_release_notes: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
