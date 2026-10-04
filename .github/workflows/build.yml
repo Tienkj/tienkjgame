@@ -1,48 +1,72 @@
 name: Build Tienkj Game
 
 on:
-workflow_dispatch:
 push:
 branches:
 - main
 tags:
 - "v*"
+workflow_dispatch:
+
+permissions:
+contents: write
 
 jobs:
-build:
+build-windows:
+name: Build Windows EXE
 runs-on: windows-latest
 
-```
 steps:
-  - name: Checkout
+  - name: Checkout source
     uses: actions/checkout@v4
 
-  - name: Setup Python
+  - name: Set up Python
     uses: actions/setup-python@v5
     with:
       python-version: "3.12"
+      cache: pip
 
   - name: Install dependencies
     run: |
       python -m pip install --upgrade pip
       python -m pip install pygame pyinstaller
 
-  - name: Check game.py
+  - name: Check Python source
     run: python -m py_compile game.py
 
   - name: Build EXE
-    run: python -m PyInstaller --onefile --windowed --name TienkjGame game.py
+    run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name TienkjGame game.py
 
-  - name: Upload EXE
+  - name: Verify build
+    shell: pwsh
+    run: |
+      if (-not (Test-Path "dist\TienkjGame.exe")) {
+        Write-Error "Build failed: dist\TienkjGame.exe was not created."
+        exit 1
+      }
+
+      $file = Get-Item "dist\TienkjGame.exe"
+      Write-Host "Build successful."
+      Write-Host "File: $($file.FullName)"
+      Write-Host "Size: $($file.Length) bytes"
+
+  - name: Calculate SHA256
+    shell: pwsh
+    run: |
+      Get-FileHash "dist\TienkjGame.exe" -Algorithm SHA256
+
+  - name: Upload Windows artifact
     uses: actions/upload-artifact@v4
     with:
       name: TienkjGame-Windows
       path: dist/TienkjGame.exe
+      if-no-files-found: error
 
-  - name: Release EXE
-    if: startsWith(github.ref, 'refs/tags/')
+  - name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
     uses: softprops/action-gh-release@v2
     with:
       files: dist/TienkjGame.exe
+      generate_release_notes: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
